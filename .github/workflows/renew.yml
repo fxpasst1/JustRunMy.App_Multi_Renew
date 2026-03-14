@@ -3,7 +3,7 @@ name: JustRunMy 自动续期 (无序随机版)
 on:
   workflow_dispatch:
   schedule:
-    # 北京时间凌晨 6:00 触发 (UTC 22:00)
+    # 每天北京时间 06:00 (UTC 22:00) 触发
     - cron: '0 22 * * *'
 
 jobs:
@@ -13,29 +13,13 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
       should_run: ${{ steps.check-schedule.outputs.should_run }}
     steps:
-    - name: 📅 检查执行间隔逻辑 (1-2天随机)
+    - name: 📅 每日多账号随机签到
       id: check-schedule
       shell: bash
       run: |
-        # 获取当前是一年中的第几天 (001-366)
-        DOY=$(date +%j)
-        DOY_NUM=$((10#$DOY))
-
+        # 每天执行，不再跳过
         echo "should_run=true" >> $GITHUB_OUTPUT
-
-        if [ "${{ github.event_name }}" = "schedule" ]; then
-          if [ $((DOY_NUM % 2)) -eq 0 ]; then
-            echo "📅 今天是第 $DOY_NUM 天 (偶数天)，触发[强制签到]模式以防过期。"
-          else
-            echo "📅 今天是第 $DOY_NUM 天 (奇数天)，进入[随机签到]模式。"
-            if [ $(( RANDOM % 2 )) -eq 0 ]; then
-              echo "🎲 随机结果：命中！今日执行。"
-            else
-              echo "🎲 随机结果：跳过。明天是偶数天，必定会执行。"
-              echo "should_run=false" >> $GITHUB_OUTPUT
-            fi
-          fi
-        fi
+        echo "📅 每日签到模式已启动，所有账号将在不同时间执行"
 
     - name: 🎲 生成随机延迟与无序矩阵
       id: set-matrix
@@ -52,12 +36,13 @@ jobs:
           exit 1
         fi
 
-        # 为每个账号生成独立的随机延迟 (0-6小时 = 0-21600秒)，确保12点前全部完成
+        # 生成更分散的随机延迟 (2-11小时)，确保账号在不同时间签到
         echo "[" > matrix.json
-        FIRST=true
+        DELAYS=""
         for ACC in $ACCOUNTS; do
           if [ "${{ github.event_name }}" = "schedule" ]; then
-            DELAY=$(shuf -i 0-21600 -n 1)
+            # 延迟范围：7200-21600秒 (2-6小时)，确保在GitHub Actions时限内完成
+            DELAY=$(shuf -i 7200-21600 -n 1)
           else
             DELAY=0
           fi
@@ -65,14 +50,10 @@ jobs:
           M=$(( (DELAY % 3600) / 60 ))
           S=$(( DELAY % 60 ))
           echo "账号 $ACC 随机延迟: $H 小时 $M 分 $S 秒"
-
-          if [ "$FIRST" = true ]; then
-            FIRST=false
-          else
-            echo "," >> matrix.json
-          fi
-          echo -n "{\"account_index\":$ACC,\"delay\":$DELAY}" >> matrix.json
+          DELAYS="${DELAYS}{\"account_index\":$ACC,\"delay\":$DELAY},"
         done
+        # 移除最后一个逗号并写入JSON
+        echo "${DELAYS%,}" | sed 's/,$//' >> matrix.json
         echo "]" >> matrix.json
 
         MATRIX=$(cat matrix.json)
