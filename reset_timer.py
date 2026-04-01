@@ -299,7 +299,7 @@ def renew(sb) -> bool:
     found = False
     for attempt in range(1, retry_count + 1):
         try:
-            sb.wait_for_element('h3.font-semibold', timeout=15)
+            sb.wait_for_element('h3.font-semibold', timeout=30)
             DYNAMIC_APP_NAME = sb.get_text('h3.font-semibold')
             print(f"成功抓取到应用名称: {DYNAMIC_APP_NAME}")
             
@@ -312,7 +312,7 @@ def renew(sb) -> bool:
             if attempt < retry_count:
                 print(f"第 {attempt} 次尝试获取应用卡片失败，刷新页面重试...")
                 sb.refresh()
-                time.sleep(5)
+                time.sleep(10)
     
     if not found:
         sb.save_screenshot("renew_app_not_found.png")
