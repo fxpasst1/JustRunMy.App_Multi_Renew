@@ -291,8 +291,9 @@ def renew(sb) -> bool:
     print("="*50)
     
     print("进入控制面板: https://justrunmy.app/panel")
-    sb.open("https://justrunmy.app/panel")
-    time.sleep(5)
+    #sb.open("https://justrunmy.app/panel")
+    sb.open("https://justrunmy.app/panel/applications")
+    time.sleep(10)
 
     print("自动读取应用名称...")
     retry_count = 3
